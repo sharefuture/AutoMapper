@@ -118,7 +118,6 @@ namespace AutoMapper.Internal
         }
         public static LambdaExpression MemberAccessLambda(Type type, string memberPath) =>
             ReflectionHelper.GetMemberPath(type, memberPath).Lambda();
-        public static MethodInfo Method<T>(Expression<Func<T>> expression) => ((MethodCallExpression)expression.Body).Method;
         public static Expression ForEach(Expression collection, ParameterExpression loopVar, Expression loopContent)
         {
             if (collection.Type.IsArray)
@@ -360,6 +359,15 @@ namespace AutoMapper.Internal
                 }
                 return Block(checkContext, checkNull);
             }
+        }
+        public static Expression MapReadOnlyCollection(Type genericCollectionType, Type genericReadOnlyCollectionType, IGlobalConfiguration configurationProvider,
+            ProfileMap profileMap, MemberMap memberMap, Expression sourceExpression, Expression destExpression)
+        {
+            var destinationTypeArguments = destExpression.Type.GenericTypeArguments;
+            var closedCollectionType = genericCollectionType.MakeGenericType(destinationTypeArguments);
+            var dict = MapCollectionExpression(configurationProvider, profileMap, memberMap, sourceExpression, Default(closedCollectionType));
+            var readOnlyClosedType = destExpression.Type.IsInterface ? genericReadOnlyCollectionType.MakeGenericType(destinationTypeArguments) : destExpression.Type;
+            return New(readOnlyClosedType.GetConstructors()[0], dict);
         }
     }
 }
